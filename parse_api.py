@@ -5,7 +5,7 @@
 #       Filename @  parse_api.py
 #         Author @  Fengchi
 #    Create date @  2017-08-13 21:16:24
-#  Last Modified @  2017-08-14 08:48:28
+#  Last Modified @  2017-08-14 10:09:40
 #    Description @  
 # *************************************************************
 
@@ -16,8 +16,8 @@ import sys
 
 DATE_FORMAT = "%Y-%m-%d"
 
-APP_KEY = '174159962'
-APP_SECRET = '7d3bfcdf9168fcebe24d0666db35cb5d'
+APP_KEY = ''
+APP_SECRET = ''
 CALLBACK_URL = 'https://api.weibo.com/oauth2/default.html'
 
 
@@ -55,4 +55,5 @@ for i in range(0,length):
     print u'简介：'+statuses[i]['user']['description']
     print u'位置：'+statuses[i]['user']['location']
     print u'微博：'+statuses[i]['text']
+
 
