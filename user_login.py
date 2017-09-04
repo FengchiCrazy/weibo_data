@@ -5,7 +5,7 @@
 #       Filename @  user_login.py
 #         Author @  Fengchi
 #    Create date @  2017-08-14 10:15:44
-#  Last Modified @  2017-08-15 09:59:33
+#  Last Modified @  2017-09-04 11:57:19
 #    Description @  
 # *************************************************************
 
@@ -103,8 +103,16 @@ class UserLogin(object):
         wb_details = wb_bs.select('div[action-type="feed_list_item"]')
         print("this page has %d weibos" % len(wb_details))
         for detail in wb_details:
-            wb_time    = detail.select("a[date]")[0]['title']
+            wb_t       = detail.select("a[date]")[0]['title'].split(' ')
+            wb_date    = wb_t[0]            
+            wb_time    = wb_t[1]
             wb_content = detail.select("div.WB_text")[0].text.replace('\u200b','').strip()
+            wb_title   = re.findall(r"(?<=[【]).*(?=[】])", wb_content)
+            if wb_title:
+                wb_title = wb_title[0]
+            else:
+                wb_title = ''
+
             wb_likes = detail.select('span[node-type="like_status"]')[0].text[1:]
             if wb_likes == "赞":
                 wb_likes = '0'
@@ -112,12 +120,13 @@ class UserLogin(object):
             if wb_forward == "转发":
                 wb_forward = '0'
 
-            res = [wb_time, wb_content, wb_forward, wb_likes]
+            res = [wb_date, wb_time, wb_title, wb_content, wb_forward, wb_likes]
             if self.parse_self:
                 # pdb.set_trace()
                 wb_read = detail.select("i[title^='此条微博']")[0]['title']
                 
                 wb_read = re.findall("\d+", wb_read)[0]
+                wb_read = str(round(int(wb_read) / 10000, 1))
                 res.append(wb_read)
             self.fw.write(','.join(res) + '\n')
             # pdb.set_trace()
@@ -159,9 +168,9 @@ class UserLogin(object):
 
     def main_parse(self, from_date = None, to_date=None):
         self.fw = open("res.csv", 'w')
-        headers = ['time', 'content', 'forward_num', 'like_num']
+        headers = ['日期', '时间', '标题', '内容', '转发', '点赞']
         if self.parse_self:
-            headers.append('read_num')
+            headers.append('阅读/万')
         self.fw.write(",".join(headers) + '\n')
         for pagenum in range(1,4):
             main_page_data = self.get_url_main_page(pagenum)
