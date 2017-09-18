@@ -1,4 +1,5 @@
-
 *.xlsx
-
+.idea/*
 *.csv
+*.xml
+*.iml
