@@ -21,18 +21,34 @@ import binascii
 import time
 import numpy as np
 import pandas as pd
-
+import pdb
 
 from bs4 import BeautifulSoup
 
 
 
 class UserLogin(object):
-    def __init__(self, username, password, parse_self = False):
-        self.username = username
-        self.password = password
+    def __init__(self, username = None, password = None, parse_self = False):
+        if username is None or password is None:
+            self.parse_username_and_password()
+        else:
+            self.username = username
+            self.password = password
+
         self.parse_self = parse_self
+        self.data = []
+
+        self.headers = ['日期', '时间', '标题', '内容', '转发', '点赞']
+        if self.parse_self:
+            self.headers.append('阅读/万')
+
         self.user_login()
+
+    def parse_username_and_password(self, data_file = "zhanghao.csv"):
+        with open(data_file) as data:
+            self.username = data.readline().strip()
+            self.password = data.readline().strip()
+
 
     def user_login(self):
         session = requests.Session()
@@ -78,9 +94,9 @@ class UserLogin(object):
         }
 
         resp = session.post(url_login, data = postdata)
-        # print(resp.headers)
-        # print()
-        # print(resp.content)
+        print(resp.headers)
+        print()
+        print(resp.content)
         login_url = re.findall(r'http://weibo.*&retcode=0', resp.text)
         # print(login_url)
 
@@ -128,7 +144,8 @@ class UserLogin(object):
                 wb_read = re.findall("\d+", wb_read)[0]
                 wb_read = str(round(int(wb_read) / 10000, 1))
                 res.append(wb_read)
-            self.fw.write(','.join(res) + '\n')
+
+            self.data.append(res)
 
     def get_url_main_page(self, pagenum):
         pagenum = str(pagenum)
@@ -163,31 +180,49 @@ class UserLogin(object):
 
         return wb_html
 
-    def main_parse(self, from_date = None, to_date=None):
-        self.fw = open("res.csv", 'w')
-        headers = ['日期', '时间', '标题', '内容', '转发', '点赞']
-        if self.parse_self:
-            headers.append('阅读/万')
-        self.fw.write(",".join(headers) + '\n')
-        for pagenum in range(1,4):
+    def main(self, type = "xlsx", from_date = None, to_date = None):
+        pagenum = 1
+        # self.flag indicate whether we should go on parsing
+        # while self.flag:
+        while pagenum < 2:
             main_page_data = self.get_url_main_page(pagenum)
             self._parse_weibo_content_from_html(main_page_data)
-            time.sleep(1)
             print("main page %s finished!" % pagenum)
+            time.sleep(1)
             for pagebar in range(2):
                 xhr_data = self.get_xhr_html(pagenum, pagebar)
                 self._parse_weibo_content_from_html(xhr_data)
-                time.sleep(1)
                 print("main page %s xhr pagebar %s finished!" % (pagenum, pagebar))
+                time.sleep(1)
 
             print("=" * 30)
+            pagenum += 1
 
-        self.fw.close()
+        df_res = pd.DataFrame(self.data, columns = self.headers)
+        # pdb.set_trace()
+        # df_res = self.parse_date(df_res, from_date, to_date)
+        if type == "csv":
+            self.out_csv(df_res)
+        elif type == "xls" or type == "xlsx":
+            self.out_xlsx(df_res)
+        else:
+            raise ValueError("Wrong Type in main")
+
+    def parse_date(self, df_res, from_date, to_date):
+        pass
+
+    def out_csv(self, df_res, from_date = None, to_date = None):
+        df_res.to_csv("res.csv", index = False)
+
+    def out_xlsx(self, df_res):
+        pass
+
+
 
 
 if __name__ == '__main__':
-    user_login = UserLogin("", "", parse_self = True)
+    user_login = UserLogin(None, None, parse_self = True)
     # main_page_data = user_login.get_url_main_page(3)
     # user_login._parse_weibo_content_from_html(main_page_data)
     # user_login.get_url_main_page(pagenum=2)
-    user_login.main_parse()
+    user_login.main(type = "csv")
