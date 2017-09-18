@@ -18,9 +18,14 @@ import urllib.parse
 import rsa
 import json
 import binascii
-import pdb
 import time
+import numpy as np
+import pandas as pd
+
+
 from bs4 import BeautifulSoup
+
+
 
 class UserLogin(object):
     def __init__(self, username, password, parse_self = False):
@@ -93,11 +98,6 @@ class UserLogin(object):
         self.session = session
 
     def _parse_weibo_content_from_html(self, html):
-        # url = "http://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100106&is_search=0&visible=0&is_all=1&is_tag=0&profile_ftype=1&page=3&pagebar=0&pl_name=Pl_Official_MyProfileFeed__24&id=1001065000609535&script_uri=/zhengfu&feed_type=0&pre_page=3&domain_op=100106&__rnd=1502698639017"
-        # url = "http://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100505&rightmod=1&wvr=6&mod=personnumber&is_all=1&pagebar=0&pl_name=Pl_Official_MyProfileFeed__21&id=1005055788421658&script_uri=/5788421658/profile&feed_type=0&page=1&pre_page=1&domain_op=100505&__rnd=1502700584262"
-        # resp = self.session.get(url)
-
-        # wb_html = resp.json()['data']
         wb_bs   = BeautifulSoup(html)
 
         wb_details = wb_bs.select('div[action-type="feed_list_item"]')
@@ -106,7 +106,7 @@ class UserLogin(object):
             wb_t       = detail.select("a[date]")[0]['title'].split(' ')
             wb_date    = wb_t[0]            
             wb_time    = wb_t[1]
-            wb_content = detail.select("div.WB_text")[0].text.replace('\u200b','').strip()
+            wb_content = detail.select("div.WB_text")[0].text.replace('\u200b', '').strip()
             wb_title   = re.findall(r"(?<=[【]).*(?=[】])", wb_content)
             if wb_title:
                 wb_title = wb_title[0]
@@ -129,7 +129,6 @@ class UserLogin(object):
                 wb_read = str(round(int(wb_read) / 10000, 1))
                 res.append(wb_read)
             self.fw.write(','.join(res) + '\n')
-            # pdb.set_trace()
 
     def get_url_main_page(self, pagenum):
         pagenum = str(pagenum)
@@ -151,7 +150,6 @@ class UserLogin(object):
 
         return html
 
-
     def get_xhr_html(self, pagenum, pagebar):
         if self.parse_self:
             url = "http://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100106&from=page_100106&mod=TAB&is_all=1&pagebar=%s&pl_name=Pl_Official_MyProfileFeed__24&id=1001065000609535&script_uri=/p/1001065000609535/home&feed_type=0&page=%s&pre_page=%s&domain_op=100106&__rnd=1502761646185" % (pagebar, pagenum, pagenum)
@@ -164,7 +162,6 @@ class UserLogin(object):
         wb_html = resp.json()['data']
 
         return wb_html
-
 
     def main_parse(self, from_date = None, to_date=None):
         self.fw = open("res.csv", 'w')
@@ -186,7 +183,6 @@ class UserLogin(object):
             print("=" * 30)
 
         self.fw.close()
-
 
 
 if __name__ == '__main__':
