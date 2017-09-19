@@ -6,7 +6,7 @@
 #         Author @  Fengchi
 #    Create date @  2017-08-14 10:15:44
 #  Last Modified @  2017-09-04 11:57:19
-#    Description @  
+#    Description @
 # *************************************************************
 
 
@@ -24,6 +24,7 @@ import pandas as pd
 import pdb
 
 from bs4 import BeautifulSoup
+
 
 
 
@@ -46,9 +47,8 @@ class UserLogin(object):
 
     def parse_username_and_password(self, data_file = "zhanghao.csv"):
         with open(data_file) as data:
-            self.username = data.readline().strip()
-            self.password = data.readline().strip()
-
+            self.username, self.password = data.readline().strip().split(' ')
+            self.mailusr, self.mailpw = data.readline().strip().split(' ')
 
     def user_login(self):
         session = requests.Session()
@@ -94,9 +94,9 @@ class UserLogin(object):
         }
 
         resp = session.post(url_login, data = postdata)
-        print(resp.headers)
-        print()
-        print(resp.content)
+        # print(resp.headers)
+        # print()
+        # print(resp.content)
         login_url = re.findall(r'http://weibo.*&retcode=0', resp.text)
         # print(login_url)
 
@@ -120,7 +120,7 @@ class UserLogin(object):
         print("this page has %d weibos" % len(wb_details))
         for detail in wb_details:
             wb_t       = detail.select("a[date]")[0]['title'].split(' ')
-            wb_date    = wb_t[0]            
+            wb_date    = wb_t[0]
             wb_time    = wb_t[1]
             wb_content = detail.select("div.WB_text")[0].text.replace('\u200b', '').strip()
             wb_title   = re.findall(r"(?<=[【]).*(?=[】])", wb_content)
@@ -140,7 +140,7 @@ class UserLogin(object):
             if self.parse_self:
                 # pdb.set_trace()
                 wb_read = detail.select("i[title^='此条微博']")[0]['title']
-                
+
                 wb_read = re.findall("\d+", wb_read)[0]
                 wb_read = str(round(int(wb_read) / 10000, 1))
                 res.append(wb_read)
@@ -161,7 +161,7 @@ class UserLogin(object):
         try:
             html = main_page_soup.select('script')[35].text[8:-1]
             html = json.loads(html)['html']
-        except:
+        except Exception:
             html = main_page_soup.select('script')[31].text[8:-1]
             html = json.loads(html)['html']
 
@@ -208,21 +208,82 @@ class UserLogin(object):
         else:
             raise ValueError("Wrong Type in main")
 
-    def parse_date(self, df_res, from_date, to_date):
+        # TODO: send email
+        # self.send_email()
+
+    def parse_df_and_clean(self, df_res, from_date, to_date):
+        """
+        made dataframe good looking. include:
+        - make date range write
+        - adjust the width of the column
+        - adjust the type of numbers from sting to int
+
+        :param df_res:
+        :param from_date:
+        :param to_date:
+        :return:
+        """
         pass
 
     def out_csv(self, df_res, from_date = None, to_date = None):
         df_res.to_csv("res.csv", index = False)
 
     def out_xlsx(self, df_res):
-        pass
+        from openpyxl.utils.dataframe import dataframe_to_rows
+        from openpyxl import Workbook
+
+        wb = Workbook()
+        ws = wb.active
+
+        for r in dataframe_to_rows(df_res, index = False, header = True):
+            ws.append(r)
+
+        wb.save("res.xlsx")
+
+    def send_email(self, attach = "res.xlsx", to_addr = ""):
+        from email import encoders
+        from email.header import Header
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from email.mime.base import MIMEBase
+        from email.utils import parseaddr, formataddr
+
+        import smtplib
+
+        def _format_addr(s):
+            name, addr = parseaddr(s)
+            return formataddr((Header(name, 'utf-8').encode(), addr))
+
+        from_addr = ""
+        password  = ""
+        smtp_server = "smtp.163.com"
+
+        msg = MIMEMultipart()
+        msg['From'] = _format_addr('Python爱好者 <%s>' % from_addr)
+        msg['To'] = _format_addr('管理员 <%s>' % to_addr)
+        msg['Subject'] = Header('', 'utf-8').encode()
+        msg.attach(MIMEText('hello, send by Python...', 'plain', 'utf-8'))
+
+        part = MIMEBase('application', "octet-stream")
+        part.set_payload(open(attach, "rb").read())
+        encoders.encode_base64(part)
+        print('attachment; filename="%s"' % attach)
+        part.add_header('Content-Disposition', 'attachment; filename="%s"' % attach)
+        msg.attach(part)
+
+        server = smtplib.SMTP(smtp_server, '25')  # SMTP协议默认端口是25
+        server.set_debuglevel(1)
+        server.login(from_addr, password)
+        server.sendmail(from_addr, [to_addr], msg.as_string())
+        server.quit()
 
 
 
 
 if __name__ == '__main__':
-    user_login = UserLogin(None, None, parse_self = True)
+    # user_login = UserLogin(None, None, parse_self = True)
     # main_page_data = user_login.get_url_main_page(3)
     # user_login._parse_weibo_content_from_html(main_page_data)
     # user_login.get_url_main_page(pagenum=2)
-    user_login.main(type = "csv")
+    # user_login.main(type = "xlsx")
+    send_email()
